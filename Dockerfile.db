@@ -1,0 +1,9 @@
+FROM keinos/sqlite3:3.42.0
+
+WORKDIR /db
+
+COPY config/db/init.sql ./init.sql
+
+RUN sqlite3 manki.db < ./init.sql
+
+CMD ["sqlite3", "manki.db"]

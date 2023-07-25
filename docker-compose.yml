@@ -1,0 +1,12 @@
+services:
+  db:
+    build:
+      context: .
+      dockerfile: Dockerfile.db
+    volumes:
+      - .:/app
+
+  app:
+    build: .
+    depends_on:
+      - db
