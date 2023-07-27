@@ -4,9 +4,14 @@ services:
       context: .
       dockerfile: Dockerfile.db
     volumes:
-      - .:/app
+      - db:/db
 
   app:
     build: .
     depends_on:
       - db
+    volumes:
+      - db:/db
+
+volumes:
+  db:
