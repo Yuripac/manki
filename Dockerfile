@@ -2,9 +2,8 @@ FROM golang:1.20
 
 WORKDIR /app
 
-COPY go.mod go.sum ./
-
-COPY *.go ./
+COPY go.mod go.sum *.go ./
+COPY pkg ./pkg
 
 RUN CGO_ENABLED=1 GOOS=linux go build -o manki
 
