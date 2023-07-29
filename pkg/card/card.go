@@ -7,6 +7,7 @@ import (
 
 type Card struct {
 	Id       int32
+	UserId   int32
 	Sentence string
 	Meaning  string
 }
@@ -33,4 +34,22 @@ func All(ctx context.Context, pool *sql.DB) ([]Card, error) {
 	}
 
 	return cards, nil
+}
+
+func Save(ctx context.Context, pool *sql.DB, c *Card) error {
+	q := `
+	INSERT INTO cards(sentence, meaning, user_id)
+	VALUES(?, ?, ?)
+	`
+	result, err := pool.ExecContext(ctx, q, c.Sentence, c.Meaning, c.UserId)
+	if err != nil {
+		return err
+	}
+	id, err := result.LastInsertId()
+	c.Id = int32(id)
+
+	if err != nil {
+		return err
+	}
+	return nil
 }
