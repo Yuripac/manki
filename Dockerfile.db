@@ -1,7 +1,11 @@
 FROM keinos/sqlite3:3.42.0
 
-WORKDIR /db
+WORKDIR /mydb
 
 COPY config/db/init.sql ./init.sql
 
-RUN sqlite3 manki.db < ./init.sql
+WORKDIR /db
+
+RUN sqlite3 manki.db < /mydb/init.sql
+
+CMD ["sqlite3", "manki.db"]
