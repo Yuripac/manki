@@ -3,19 +3,21 @@ package card
 import (
 	"context"
 	"database/sql"
+	"fmt"
 )
 
 type Card struct {
-	Id       int32
-	UserId   int32
-	Sentence string
-	Meaning  string
+	Id       int32  `json:"id"`
+	UserId   int32  `json:"user_id"`
+	Sentence string `json:"sentence"`
+	Meaning  string `json:"meaning"`
 }
 
 func All(ctx context.Context, pool *sql.DB) ([]Card, error) {
 	q := `
 	SELECT id, sentence, meaning
-	FROM cards;
+	FROM cards
+	ORDER BY id DESC;
 	`
 	rows, err := pool.QueryContext(ctx, q)
 	if err != nil {
@@ -36,7 +38,12 @@ func All(ctx context.Context, pool *sql.DB) ([]Card, error) {
 	return cards, nil
 }
 
+// TODO: Validates if user exists
 func Save(ctx context.Context, pool *sql.DB, c *Card) error {
+	if c.Sentence == "" || c.Meaning == "" || c.UserId == 0 {
+		return fmt.Errorf("card attribute is missing")
+	}
+
 	q := `
 	INSERT INTO cards(sentence, meaning, user_id)
 	VALUES(?, ?, ?)
