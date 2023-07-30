@@ -1,15 +1,17 @@
 services:
-  db:
-    build:
-      context: .
-      dockerfile: Dockerfile.db
-    volumes:
-      - shared-volume:/db
-
   app:
     build: .
     depends_on:
       - db
+    volumes:
+      - shared-volume:/db
+    ports:
+      - "3000:3000"
+
+  db:
+    build:
+      context: .
+      dockerfile: Dockerfile.db
     volumes:
       - shared-volume:/db
 

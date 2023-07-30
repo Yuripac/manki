@@ -5,6 +5,9 @@ WORKDIR /app
 COPY go.mod go.sum *.go ./
 COPY pkg ./pkg
 
-RUN CGO_ENABLED=1 GOOS=linux go build -o manki
+ENV CGO_ENABLED 1
+ENV GOOS linux
+
+RUN go build -o manki
 
 CMD ["./manki"]
