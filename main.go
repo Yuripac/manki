@@ -3,11 +3,8 @@ package main
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
-	"io"
 	"log"
-	"manki/pkg/card"
-	"manki/pkg/user"
+	"manki/pkg/handler"
 	"net/http"
 	"os"
 
@@ -24,43 +21,9 @@ func main() {
 	}
 	defer pool.Close()
 
-	mux := http.NewServeMux()
-
-	mux.HandleFunc("/cards", func(w http.ResponseWriter, r *http.Request) {
-		switch r.Method {
-		case "POST":
-			body, _ := io.ReadAll(r.Body)
-
-			var c card.Card
-			json.Unmarshal(body, &c)
-
-			if ok, _ := user.Exists(ctx, pool, c.UserId); !ok {
-				http.Error(w, "user was not found", http.StatusNotFound)
-				return
-			}
-
-			if err := card.Save(ctx, pool, &c); err != nil {
-				http.Error(w, err.Error(), http.StatusBadRequest)
-				return
-			}
-
-			body, _ = json.Marshal(c)
-			w.Write(body)
-		case "GET":
-			cards, err := card.All(ctx, pool)
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusBadRequest)
-				return
-			}
-
-			body, _ := json.Marshal(cards)
-			w.Write(body)
-		}
-	})
-
 	server := http.Server{
-		Addr:    ":3000",
-		Handler: mux,
+		Addr:    ":" + os.Getenv("PORT"),
+		Handler: handler.New(ctx, pool),
 	}
 
 	go func() {
