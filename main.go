@@ -4,11 +4,12 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
-	"io/ioutil"
+	"io"
 	"log"
 	"manki/pkg/card"
 	"manki/pkg/user"
 	"net/http"
+	"os"
 
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -17,7 +18,7 @@ func main() {
 	ctx, stop := context.WithCancel(context.Background())
 	defer stop()
 
-	pool, err := sql.Open("sqlite3", "/db/manki.db")
+	pool, err := sql.Open("sqlite3", os.Getenv("DB_DSN"))
 	if err != nil {
 		log.Fatalf("error opening the database: %s", err)
 	}
@@ -28,7 +29,7 @@ func main() {
 	mux.HandleFunc("/cards", func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case "POST":
-			body, _ := ioutil.ReadAll(r.Body)
+			body, _ := io.ReadAll(r.Body)
 
 			var c card.Card
 			json.Unmarshal(body, &c)

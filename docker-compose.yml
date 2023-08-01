@@ -1,6 +1,7 @@
 services:
   app:
     build: .
+    env_file: .env.development
     depends_on:
       - db
     volumes:

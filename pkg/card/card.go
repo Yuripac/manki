@@ -38,9 +38,8 @@ func All(ctx context.Context, pool *sql.DB) ([]Card, error) {
 	return cards, nil
 }
 
-// TODO: Validates if user exists
 func Save(ctx context.Context, pool *sql.DB, c *Card) error {
-	if c.Sentence == "" || c.Meaning == "" || c.UserId == 0 {
+	if !c.isValid() {
 		return fmt.Errorf("card attribute is missing")
 	}
 
@@ -59,4 +58,8 @@ func Save(ctx context.Context, pool *sql.DB, c *Card) error {
 		return err
 	}
 	return nil
+}
+
+func (c Card) isValid() bool {
+	return c.Sentence != "" && c.Meaning != "" && c.UserId != 0
 }
