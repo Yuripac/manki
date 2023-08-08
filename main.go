@@ -11,11 +11,15 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
+const (
+	DbDriverName = "sqlite3"
+)
+
 func main() {
 	ctx, stop := context.WithCancel(context.Background())
 	defer stop()
 
-	pool, err := sql.Open("sqlite3", os.Getenv("DB_DSN"))
+	pool, err := sql.Open(os.Getenv("DB_DRIVER_NAME"), os.Getenv("DB_DSN"))
 	if err != nil {
 		log.Fatalf("error opening the database: %s", err)
 	}

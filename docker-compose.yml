@@ -5,7 +5,7 @@ services:
     depends_on:
       - db
     volumes:
-      - shared-volume:/db
+      - shared-volume1:/db
     ports:
       - "3000:3000"
 
@@ -14,7 +14,7 @@ services:
       context: .
       dockerfile: Dockerfile.db
     volumes:
-      - shared-volume:/db
+      - shared-volume1:/db
 
 volumes:
-  shared-volume:
+  shared-volume1:

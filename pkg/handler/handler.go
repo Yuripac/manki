@@ -21,8 +21,27 @@ func New(ctx context.Context, pool *sql.DB) *http.ServeMux {
 	h := handler{ctx, pool}
 
 	mux.HandleFunc("/cards", h.cardsHandler)
+	mux.HandleFunc("/cards/next", h.cardsNextHandler)
 
 	return mux
+}
+
+func (h handler) cardsNextHandler(w http.ResponseWriter, r *http.Request) {
+	c, err := card.Next(h.ctx, h.pool)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if r.Method == "PUT" {
+		if err = card.UpdateMemo(h.ctx, h.pool, c, 3); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+	}
+
+	body, _ := json.Marshal(c)
+	w.Write(body)
 }
 
 func (h handler) cardsHandler(w http.ResponseWriter, r *http.Request) {
@@ -40,7 +59,7 @@ func (h handler) cardsHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		if err := card.Save(ctx, pool, &c); err != nil {
+		if err := card.Add(ctx, pool, &c); err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
