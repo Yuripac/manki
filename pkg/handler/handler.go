@@ -29,7 +29,7 @@ func New(ctx context.Context, pool *sql.DB) *http.ServeMux {
 func (h handler) cardsNextHandler(w http.ResponseWriter, r *http.Request) {
 	c, err := card.Next(h.ctx, h.pool)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, "no card to remember", http.StatusNotFound)
 		return
 	}
 
