@@ -15,5 +15,3 @@ CREATE TABLE cards (
     next_repetition_at TEXT,
     FOREIGN KEY(user_id) references users(id)
 );
-
-INSERT INTO cards(sentence, meaning, user_id, next_repetition_at) values ('bla', 'ble', 1, '2023-08-03');
