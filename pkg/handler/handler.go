@@ -20,6 +20,7 @@ func New(ctx context.Context, pool *sql.DB) *http.ServeMux {
 
 	h := handler{ctx, pool}
 
+	mux.HandleFunc("/status", healthcheckHandler)
 	mux.HandleFunc("/cards", h.cardsHandler)
 	mux.HandleFunc("/cards/next", h.cardsNextHandler)
 
@@ -76,4 +77,7 @@ func (h handler) cardsHandler(w http.ResponseWriter, r *http.Request) {
 		body, _ := json.Marshal(cards)
 		w.Write(body)
 	}
+}
+
+func healthcheckHandler(w http.ResponseWriter, r *http.Request) {
 }
