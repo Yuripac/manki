@@ -14,7 +14,7 @@ services:
     env_file: .env.development
     restart: always
     ports:
-      - "3307:3307"
+      - "3307:3306"
     volumes:
       - shared-volume1:/db
 
