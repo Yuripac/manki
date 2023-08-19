@@ -10,9 +10,11 @@ services:
       - "3000:3000"
 
   db:
-    build:
-      context: .
-      dockerfile: Dockerfile.db
+    build: db/.
+    env_file: .env.development
+    restart: always
+    ports:
+      - "3307:3307"
     volumes:
       - shared-volume1:/db
 
