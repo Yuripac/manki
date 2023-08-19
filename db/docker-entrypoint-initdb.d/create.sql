@@ -12,6 +12,5 @@ CREATE TABLE cards (
     user_id INTEGER NOT NULL,
     repetitions INTEGER DEFAULT 0 NOT NULL,
     efactor REAL DEFAULT 2.5 NOT NULL,
-    next_repetition_at TEXT,
-    FOREIGN KEY(user_id) references users(id)
+    next_repetition_at TEXT
 );
