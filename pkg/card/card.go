@@ -4,16 +4,17 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"time"
 )
 
 type Card struct {
-	Id             int32   `json:"id"`
-	UserId         int32   `json:"user_id"`
-	Sentence       string  `json:"sentence"`
-	Meaning        string  `json:"meaning"`
-	Efactor        float64 `json:"efactor"`
-	Repetitions    int32   `json:"repetitions"`
-	NextRepetition string  `json:"next_repetition_at"`
+	Id             int32      `json:"id"`
+	UserId         int32      `json:"user_id"`
+	Sentence       string     `json:"sentence"`
+	Meaning        string     `json:"meaning"`
+	Efactor        float64    `json:"efactor"`
+	Repetitions    int32      `json:"repetitions"`
+	NextRepetition *time.Time `json:"next_repetition_at"`
 }
 
 func Next(ctx context.Context, pool *sql.DB) (*Card, error) {
@@ -28,6 +29,7 @@ func Next(ctx context.Context, pool *sql.DB) (*Card, error) {
 	var card Card
 	err := pool.QueryRowContext(ctx, q).Scan(&card.Id, &card.Repetitions, &card.Efactor, &card.NextRepetition)
 	if err != nil {
+		fmt.Printf("error searching the next card: %s\n", err)
 		return nil, err
 	}
 
@@ -69,7 +71,8 @@ func UpdateMemo(ctx context.Context, pool *sql.DB, c *Card, score float64) error
 	c.Repetitions++
 	memo := Memo{Card: c}
 	c.Efactor = memo.CalcEfactor(score)
-	c.NextRepetition = memo.NextRepetition().Format("2006-01-02")
+	nextRep := memo.NextRepetition()
+	c.NextRepetition = &nextRep
 
 	result, err := pool.ExecContext(ctx, q, c.Repetitions, c.Efactor, c.NextRepetition, c.Id)
 	if err != nil {

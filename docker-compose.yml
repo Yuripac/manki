@@ -5,7 +5,7 @@ services:
     depends_on:
       - db
     volumes:
-      - shared-volume1:/db
+      - shared-volume:/db
     ports:
       - "3000:3000"
 
@@ -16,7 +16,7 @@ services:
     ports:
       - "3307:3306"
     volumes:
-      - shared-volume1:/db
+      - shared-volume:/db
 
 volumes:
-  shared-volume1:
+  shared-volume:

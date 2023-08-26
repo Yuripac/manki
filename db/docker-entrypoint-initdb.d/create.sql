@@ -12,5 +12,6 @@ CREATE TABLE cards (
     user_id INTEGER NOT NULL,
     repetitions INTEGER DEFAULT 0 NOT NULL,
     efactor REAL DEFAULT 2.5 NOT NULL,
-    next_repetition_at TEXT
+    next_repetition_at DATE,
+    created_at TIMESTAMP
 );
