@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"log"
-	"manki/config"
 	"manki/pkg/handler"
 	"net/http"
 
@@ -19,13 +18,8 @@ func main() {
 	ctx, stop := context.WithCancel(context.Background())
 	defer stop()
 
-	sc, err := config.NewSecretClient()
-	if err != nil {
-		log.Fatalf("error inilializing secrets: %s", err)
-	}
-
-	s, _ := sc.GetSecret("prod/db_dsn")
-	pool, err := sql.Open(DB, s["DB_DSN"])
+	dsn := "value"
+	pool, err := sql.Open(DB, dsn)
 	if err != nil {
 		log.Fatalf("error opening the database: %s", err)
 	}

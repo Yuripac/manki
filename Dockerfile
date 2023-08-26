@@ -4,7 +4,6 @@ WORKDIR /app
 
 COPY go.mod go.sum *.go ./
 COPY pkg ./pkg
-COPY config ./config
 
 ENV CGO_ENABLED 1
 ENV GOOS linux
