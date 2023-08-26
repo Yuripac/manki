@@ -27,7 +27,7 @@ func main() {
 	defer pool.Close()
 
 	server := http.Server{
-		Addr:    ":" + "3000",
+		Addr:    ":" + os.Getenv("PORT"),
 		Handler: handler.New(ctx, pool),
 	}
 
