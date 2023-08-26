@@ -6,6 +6,7 @@ import (
 	"log"
 	"manki/pkg/handler"
 	"net/http"
+	"os"
 
 	_ "github.com/go-sql-driver/mysql"
 )
@@ -18,7 +19,7 @@ func main() {
 	ctx, stop := context.WithCancel(context.Background())
 	defer stop()
 
-	dsn := "value"
+	dsn := os.Getenv("DB_DSN")
 	pool, err := sql.Open(DB, dsn)
 	if err != nil {
 		log.Fatalf("error opening the database: %s", err)
