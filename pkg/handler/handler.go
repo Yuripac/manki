@@ -5,9 +5,12 @@ import (
 	"database/sql"
 	"encoding/json"
 	"io"
+	"log"
 	"manki/pkg/card"
 	"manki/pkg/user"
 	"net/http"
+
+	"github.com/gorilla/mux"
 )
 
 type handler struct {
@@ -15,27 +18,29 @@ type handler struct {
 	pool *sql.DB
 }
 
-func New(ctx context.Context, pool *sql.DB) *http.ServeMux {
-	mux := http.NewServeMux()
-
+func NewRouter(ctx context.Context, pool *sql.DB) http.Handler {
 	h := handler{ctx, pool}
 
-	mux.HandleFunc("/status", healthcheckHandler)
-	mux.HandleFunc("/cards", h.cardsHandler)
-	mux.HandleFunc("/cards/next", h.cardsNextHandler)
+	r := mux.NewRouter()
 
-	return mux
+	r.HandleFunc("/status", healthcheckHandler).Methods("GET")
+	r.HandleFunc("/cards", h.cardsHandler).Methods("GET", "POST")
+	r.HandleFunc("/cards/next", h.cardsNextHandler).Methods("GET", "PUT")
+
+	return r
 }
 
 func (h handler) cardsNextHandler(w http.ResponseWriter, r *http.Request) {
 	c, err := card.Next(h.ctx, h.pool)
 	if err != nil {
+		log.Printf("error searching for next card: %s", err)
 		http.Error(w, "no card to remember", http.StatusNotFound)
 		return
 	}
 
 	if r.Method == "PUT" {
 		if err = card.UpdateMemo(h.ctx, h.pool, c, 3); err != nil {
+			log.Printf("error updating the next card: %s", err)
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
@@ -61,6 +66,7 @@ func (h handler) cardsHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if err := card.Add(ctx, pool, &c); err != nil {
+			log.Printf("error adding a new card: %s", err)
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
@@ -70,6 +76,7 @@ func (h handler) cardsHandler(w http.ResponseWriter, r *http.Request) {
 	case "GET":
 		cards, err := card.All(ctx, pool)
 		if err != nil {
+			log.Printf("error listing cards: %s", err)
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}

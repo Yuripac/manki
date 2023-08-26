@@ -19,7 +19,7 @@ type Card struct {
 
 func Next(ctx context.Context, pool *sql.DB) (*Card, error) {
 	q := `
-	SELECT id, repetitions, efactor, next_repetition_at
+	SELECT id, sentence, meaning, repetitions, efactor, next_repetition_at
 	FROM cards
 	WHERE next_repetition_at IS NULL 
 		OR DATE(next_repetition_at) <= DATE('now')
@@ -27,9 +27,10 @@ func Next(ctx context.Context, pool *sql.DB) (*Card, error) {
 	`
 
 	var card Card
-	err := pool.QueryRowContext(ctx, q).Scan(&card.Id, &card.Repetitions, &card.Efactor, &card.NextRepetition)
+	err := pool.QueryRowContext(ctx, q).Scan(&card.Id, &card.Sentence, &card.Meaning,
+		&card.Repetitions, &card.Efactor, &card.NextRepetition)
+
 	if err != nil {
-		fmt.Printf("error searching the next card: %s\n", err)
 		return nil, err
 	}
 

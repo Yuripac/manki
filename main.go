@@ -28,7 +28,7 @@ func main() {
 
 	server := http.Server{
 		Addr:    ":" + os.Getenv("PORT"),
-		Handler: handler.New(ctx, pool),
+		Handler: handler.NewRouter(ctx, pool),
 	}
 
 	go func() {
