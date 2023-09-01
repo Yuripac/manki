@@ -17,17 +17,17 @@ type Card struct {
 	NextRepetition *time.Time `json:"next_repetition_at"`
 }
 
-func Next(ctx context.Context, pool *sql.DB) (*Card, error) {
+func Next(ctx context.Context, pool *sql.DB, userId int32) (*Card, error) {
 	q := `
 	SELECT id, sentence, meaning, repetitions, efactor, next_repetition_at
 	FROM cards
-	WHERE next_repetition_at IS NULL 
-		OR DATE(next_repetition_at) <= DATE('now')
+	WHERE (next_repetition_at IS NULL OR DATE(next_repetition_at) <= DATE('now'))
+		AND user_id = ?
 	LIMIT 1
 	`
 
 	var card Card
-	err := pool.QueryRowContext(ctx, q).Scan(&card.Id, &card.Sentence, &card.Meaning,
+	err := pool.QueryRowContext(ctx, q, userId).Scan(&card.Id, &card.Sentence, &card.Meaning,
 		&card.Repetitions, &card.Efactor, &card.NextRepetition)
 
 	if err != nil {
@@ -37,13 +37,14 @@ func Next(ctx context.Context, pool *sql.DB) (*Card, error) {
 	return &card, nil
 }
 
-func All(ctx context.Context, pool *sql.DB) ([]Card, error) {
+func All(ctx context.Context, pool *sql.DB, userId int32) ([]Card, error) {
 	q := `
 	SELECT id, sentence, meaning
 	FROM cards
+	WHERE user_id = ?
 	ORDER BY id DESC;
 	`
-	rows, err := pool.QueryContext(ctx, q)
+	rows, err := pool.QueryContext(ctx, q, userId)
 	if err != nil {
 		return nil, err
 	}

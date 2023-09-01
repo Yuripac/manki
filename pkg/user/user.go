@@ -29,7 +29,7 @@ func FindByJWT(ctx context.Context, pool *sql.DB, tokenStr string) (*User, error
 		return []byte(os.Getenv("JWT_SECRET")), nil
 	})
 
-	if token.Valid {
+	if !token.Valid {
 		return nil, fmt.Errorf("JWT is not valid")
 	}
 

@@ -7,6 +7,7 @@ import (
 	"manki/pkg/handler"
 	"net/http"
 	"os"
+	"time"
 
 	_ "github.com/go-sql-driver/mysql"
 )
@@ -16,6 +17,7 @@ const (
 )
 
 func main() {
+	time.Sleep(3 * time.Second)
 	ctx, stop := context.WithCancel(context.Background())
 	defer stop()
 
