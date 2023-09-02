@@ -2,7 +2,10 @@ DROP TABLE IF EXISTS users;
 CREATE TABLE users (
     id INTEGER PRIMARY KEY AUTO_INCREMENT,
     name TEXT NOT NULL,
-    email TEXT NOT NULL
+    email varchar(100) NOT NULL,
+    password_encrypted TEXT NOT NULL,
+    created_at TIMESTAMP,
+    UNIQUE (email)
 );
 
 DROP TABLE IF EXISTS cards;
