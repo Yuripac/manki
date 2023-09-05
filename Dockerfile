@@ -10,7 +10,7 @@ COPY handler ./handler
 ENV CGO_ENABLED 1
 ENV GOOS linux
 
-# RUN go build -o manki
+RUN go build -o manki
 
-# CMD ["./manki"]
-CMD ["go", "run", "."]
+CMD ["./manki"]
+# CMD ["go", "run", "."]
