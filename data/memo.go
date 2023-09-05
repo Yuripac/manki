@@ -3,7 +3,7 @@ package data
 import "time"
 
 type Memo struct {
-	Card *Card
+	*Card
 }
 
 func (memo Memo) CalcEfactor(score float64) float64 {

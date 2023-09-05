@@ -4,6 +4,7 @@ WORKDIR /app
 
 COPY go.mod go.sum *.go ./
 COPY data ./data
+COPY db ./db
 COPY handler ./handler
 
 
