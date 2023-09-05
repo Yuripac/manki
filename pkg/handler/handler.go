@@ -83,17 +83,12 @@ func (h handler) authMiddleware(next http.Handler) http.Handler {
 	})
 }
 
-type signin struct {
-	Email    string `json:"email"`
-	Password string `json:"password"`
-}
-
 func (h handler) signInHandler(w http.ResponseWriter, r *http.Request) {
 	body, _ := io.ReadAll(r.Body)
-	var in signin
+	var in user.SignIn
 	json.Unmarshal(body, &in)
 
-	user, err := user.SignIn(h.ctx, h.pool, in.Email, in.Password)
+	user, err := in.Validate(h.ctx, h.pool)
 	if err != nil {
 		http.Error(w, "email or password incorrect", http.StatusUnauthorized)
 		return
