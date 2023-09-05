@@ -4,10 +4,9 @@ import (
 	"context"
 	"database/sql"
 	"log"
-	"manki/pkg/handler"
+	"manki/handler"
 	"net/http"
 	"os"
-	"time"
 
 	_ "github.com/go-sql-driver/mysql"
 )
@@ -17,9 +16,8 @@ const (
 )
 
 func main() {
-	time.Sleep(3 * time.Second)
-	ctx, stop := context.WithCancel(context.Background())
-	defer stop()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
 	dsn := os.Getenv("DB_DSN")
 	pool, err := sql.Open(DB, dsn)

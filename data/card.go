@@ -1,4 +1,4 @@
-package card
+package data
 
 import (
 	"context"
@@ -8,7 +8,7 @@ import (
 )
 
 type Card struct {
-	Id             int32      `json:"id"`
+	ID             int32      `json:"id"`
 	UserId         int32      `json:"user_id"`
 	Sentence       string     `json:"sentence"`
 	Meaning        string     `json:"meaning"`
@@ -17,7 +17,7 @@ type Card struct {
 	NextRepetition *time.Time `json:"next_repetition_at"`
 }
 
-func Next(ctx context.Context, pool *sql.DB, userId int32) (*Card, error) {
+func NextCard(ctx context.Context, pool *sql.DB, userId int32) (*Card, error) {
 	q := `
 	SELECT id, sentence, meaning, repetitions, efactor, next_repetition_at
 	FROM cards
@@ -27,7 +27,7 @@ func Next(ctx context.Context, pool *sql.DB, userId int32) (*Card, error) {
 	`
 
 	var card Card
-	err := pool.QueryRowContext(ctx, q, userId).Scan(&card.Id, &card.Sentence, &card.Meaning,
+	err := pool.QueryRowContext(ctx, q, userId).Scan(&card.ID, &card.Sentence, &card.Meaning,
 		&card.Repetitions, &card.Efactor, &card.NextRepetition)
 
 	if err != nil {
@@ -37,7 +37,7 @@ func Next(ctx context.Context, pool *sql.DB, userId int32) (*Card, error) {
 	return &card, nil
 }
 
-func All(ctx context.Context, pool *sql.DB, userId int32) ([]Card, error) {
+func Cards(ctx context.Context, pool *sql.DB, userId int32) ([]Card, error) {
 	q := `
 	SELECT id, sentence, meaning
 	FROM cards
@@ -53,7 +53,7 @@ func All(ctx context.Context, pool *sql.DB, userId int32) ([]Card, error) {
 	var cards []Card
 	for rows.Next() {
 		var card Card
-		rows.Scan(&card.Id, &card.Sentence, &card.Meaning)
+		rows.Scan(&card.ID, &card.Sentence, &card.Meaning)
 		cards = append(cards, card)
 	}
 	if err := rows.Err(); err != nil {
@@ -76,7 +76,7 @@ func UpdateMemo(ctx context.Context, pool *sql.DB, c *Card, score float64) error
 	nextRep := memo.NextRepetition()
 	c.NextRepetition = &nextRep
 
-	result, err := pool.ExecContext(ctx, q, c.Repetitions, c.Efactor, c.NextRepetition, c.Id)
+	result, err := pool.ExecContext(ctx, q, c.Repetitions, c.Efactor, c.NextRepetition, c.ID)
 	if err != nil {
 		return err
 	}
@@ -85,12 +85,12 @@ func UpdateMemo(ctx context.Context, pool *sql.DB, c *Card, score float64) error
 		return err
 	}
 	if affected == 0 {
-		return fmt.Errorf("card %d not updated", c.Id)
+		return fmt.Errorf("card %d not updated", c.ID)
 	}
 	return nil
 }
 
-func Add(ctx context.Context, pool *sql.DB, c *Card) error {
+func AddCard(ctx context.Context, pool *sql.DB, c *Card) error {
 	if !c.isValid() {
 		return fmt.Errorf("card attribute is missing")
 	}
@@ -104,7 +104,7 @@ func Add(ctx context.Context, pool *sql.DB, c *Card) error {
 		return err
 	}
 	id, err := result.LastInsertId()
-	c.Id = int32(id)
+	c.ID = int32(id)
 
 	if err != nil {
 		return err

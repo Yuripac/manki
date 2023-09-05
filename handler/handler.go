@@ -7,8 +7,7 @@ import (
 	"errors"
 	"io"
 	"log"
-	"manki/pkg/card"
-	"manki/pkg/user"
+	"manki/data"
 	"net/http"
 	"strings"
 
@@ -24,9 +23,9 @@ func NewRouter(ctx context.Context, pool *sql.DB) http.Handler {
 	h := handler{ctx, pool}
 
 	r := mux.NewRouter()
+
 	r.HandleFunc("/signin", h.signInHandler).Methods("POST")
 	r.HandleFunc("/signup", h.signUpHandler).Methods("POST")
-
 	r.HandleFunc("/status", healthcheckHandler).Methods("GET")
 
 	userR := r.PathPrefix("/users/").Subrouter()
@@ -39,9 +38,9 @@ func NewRouter(ctx context.Context, pool *sql.DB) http.Handler {
 }
 
 func (h handler) cardsNextHandler(w http.ResponseWriter, r *http.Request) {
-	userAuth, _ := r.Context().Value("user").(*user.User)
+	userAuth, _ := r.Context().Value("user").(*data.User)
 
-	c, err := card.Next(h.ctx, h.pool, userAuth.Id)
+	c, err := data.NextCard(h.ctx, h.pool, userAuth.ID)
 	if err != nil {
 		log.Printf("error searching for next card: %s", err)
 		http.Error(w, "no card to remember", http.StatusNotFound)
@@ -49,7 +48,7 @@ func (h handler) cardsNextHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if r.Method == "PUT" {
-		if err = card.UpdateMemo(h.ctx, h.pool, c, 3); err != nil {
+		if err = data.UpdateMemo(h.ctx, h.pool, c, 3); err != nil {
 			log.Printf("error updating the next card: %s", err)
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
@@ -65,7 +64,7 @@ func (h handler) authMiddleware(next http.Handler) http.Handler {
 		authHeader := r.Header.Get("Authorization")
 
 		if authValues := strings.Split(authHeader, "Bearer "); len(authValues) == 2 {
-			userAuth, err := user.FindByJWT(h.ctx, h.pool, authValues[1])
+			userAuth, err := data.FindUserByJWT(h.ctx, h.pool, authValues[1])
 			if err != nil {
 				log.Printf("error on find by jwt: %s", err)
 
@@ -85,7 +84,7 @@ func (h handler) authMiddleware(next http.Handler) http.Handler {
 
 func (h handler) signInHandler(w http.ResponseWriter, r *http.Request) {
 	body, _ := io.ReadAll(r.Body)
-	var in user.SignIn
+	var in data.SignIn
 	json.Unmarshal(body, &in)
 
 	user, err := in.Validate(h.ctx, h.pool)
@@ -111,7 +110,7 @@ var ErrCreatingUser = errors.New("error creating the user")
 func (h handler) signUpHandler(w http.ResponseWriter, r *http.Request) {
 	body, _ := io.ReadAll(r.Body)
 
-	var signup user.SignUp
+	var signup data.SignUp
 	json.Unmarshal(body, &signup)
 
 	user, err := signup.Save(h.ctx, h.pool)
@@ -136,18 +135,18 @@ func (h handler) signUpHandler(w http.ResponseWriter, r *http.Request) {
 
 func (h handler) cardsHandler(w http.ResponseWriter, r *http.Request) {
 	ctx, pool := h.ctx, h.pool
-	userAuth, _ := r.Context().Value("user").(*user.User)
+	userAuth, _ := r.Context().Value("user").(*data.User)
 
 	switch r.Method {
 	case "POST":
 		body, _ := io.ReadAll(r.Body)
 
-		var c card.Card
+		var c data.Card
 		json.Unmarshal(body, &c)
 
-		c.UserId = userAuth.Id
+		c.UserId = userAuth.ID
 
-		if err := card.Add(ctx, pool, &c); err != nil {
+		if err := data.AddCard(ctx, pool, &c); err != nil {
 			log.Printf("error adding a new card: %s", err)
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
@@ -156,7 +155,7 @@ func (h handler) cardsHandler(w http.ResponseWriter, r *http.Request) {
 		body, _ = json.Marshal(c)
 		w.Write(body)
 	case "GET":
-		cards, err := card.All(ctx, pool, userAuth.Id)
+		cards, err := data.Cards(ctx, pool, userAuth.ID)
 		if err != nil {
 			log.Printf("error listing cards: %s", err)
 			http.Error(w, err.Error(), http.StatusBadRequest)
