@@ -71,10 +71,8 @@ func UpdateMemo(ctx context.Context, pool *sql.DB, c *Card, score float64) error
 	`
 
 	c.Repetitions++
-	memo := Memo{Card: c}
-	c.Efactor = memo.CalcEfactor(score)
-	nextRep := memo.NextRepetition()
-	c.NextRepetition = &nextRep
+
+	CalcCardMemo(c, score)
 
 	result, err := pool.ExecContext(ctx, q, c.Repetitions, c.Efactor, c.NextRepetition, c.ID)
 	if err != nil {
