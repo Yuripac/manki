@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 )
@@ -19,9 +20,10 @@ type User struct {
 
 func (u User) GenJWT() (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"id":    u.ID,
-		"name":  u.Name,
-		"email": u.Email,
+		"id":         u.ID,
+		"name":       u.Name,
+		"email":      u.Email,
+		"expires_at": time.Now().Add(15 * 24 * time.Hour).Unix(),
 	})
 	tokenStr, err := token.SignedString([]byte(os.Getenv("JWT_SECRET")))
 	if err != nil {
@@ -44,6 +46,12 @@ func FindUserByJWT(ctx context.Context, pool *sql.DB, tokenStr string) (*User, e
 	}
 
 	if claims, ok := token.Claims.(jwt.MapClaims); ok {
+		expiresAt, _ := claims["expires_at"].(float64)
+
+		if time.Now().Unix() > int64(expiresAt) {
+			return nil, fmt.Errorf("token is expired")
+		}
+
 		if id, ok := claims["id"].(float64); ok {
 			return FindUserById(ctx, pool, int32(id))
 		} else {
