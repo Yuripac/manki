@@ -15,15 +15,15 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	pool, err := db.Open()
+	err := db.Init()
 	if err != nil {
 		log.Fatalf("error opening the database: %s", err)
 	}
-	defer pool.Close()
+	defer db.Pool().Close()
 
 	server := http.Server{
 		Addr:    ":" + os.Getenv("PORT"),
-		Handler: handler.NewRouter(ctx, pool),
+		Handler: handler.NewRouter(ctx),
 	}
 
 	go func() {

@@ -9,6 +9,18 @@ const (
 	DB = "mysql"
 )
 
-func Open() (*sql.DB, error) {
-	return sql.Open(DB, os.Getenv("DB_DSN"))
+var pool *sql.DB
+
+func Init() (err error) {
+	pool, err = sql.Open(DB, os.Getenv("DB_DSN"))
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func Pool() *sql.DB {
+	return pool
 }

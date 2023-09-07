@@ -2,8 +2,8 @@ package data
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
+	"manki/db"
 
 	"golang.org/x/crypto/bcrypt"
 )
@@ -19,7 +19,7 @@ type SignIn struct {
 	Psw   string `json:"password"`
 }
 
-func (up SignUp) Save(ctx context.Context, pool *sql.DB) (*User, error) {
+func (up SignUp) Save(ctx context.Context) (*User, error) {
 	if up.Psw == "" {
 		return nil, fmt.Errorf("password is missing")
 	}
@@ -33,7 +33,7 @@ func (up SignUp) Save(ctx context.Context, pool *sql.DB) (*User, error) {
 	INSERT INTO users(name, email, password_encrypted)
 	VALUES(?, ?, ?)
 	`
-	result, err := pool.ExecContext(ctx, q, up.Name, up.Email, pswEncrypted)
+	result, err := db.Pool().ExecContext(ctx, q, up.Name, up.Email, pswEncrypted)
 	if err != nil {
 		return nil, err
 	}
@@ -43,13 +43,13 @@ func (up SignUp) Save(ctx context.Context, pool *sql.DB) (*User, error) {
 		return nil, err
 	}
 
-	return FindUserById(ctx, pool, int32(id))
+	return FindUserById(ctx, int32(id))
 }
 
-func (in SignIn) Validate(ctx context.Context, pool *sql.DB) (*User, error) {
+func (in SignIn) Validate(ctx context.Context) (*User, error) {
 	q := `SELECT id, name, email, password_encrypted FROM users WHERE email = ?`
 
-	row := pool.QueryRowContext(ctx, q, in.Email)
+	row := db.Pool().QueryRowContext(ctx, q, in.Email)
 
 	var user User
 	err := row.Scan(&user.ID, &user.Name, &user.Email, &user.PswEncrypted)

@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"manki/db"
 	"os"
 	"time"
 
@@ -34,7 +35,7 @@ func (u User) GenJWT() (string, error) {
 	return tokenStr, nil
 }
 
-func FindUserByJWT(ctx context.Context, pool *sql.DB, tokenStr string) (*User, error) {
+func FindUserByJWT(ctx context.Context, tokenStr string) (*User, error) {
 	token, err := jwt.Parse(tokenStr, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
@@ -55,7 +56,7 @@ func FindUserByJWT(ctx context.Context, pool *sql.DB, tokenStr string) (*User, e
 		}
 
 		if id, ok := claims["id"].(float64); ok {
-			return FindUserById(ctx, pool, int32(id))
+			return FindUserById(ctx, int32(id))
 		} else {
 			return nil, fmt.Errorf("User ID was not found in JWT")
 		}
@@ -64,10 +65,10 @@ func FindUserByJWT(ctx context.Context, pool *sql.DB, tokenStr string) (*User, e
 	return nil, err
 }
 
-func FindUserById(ctx context.Context, pool *sql.DB, id int32) (*User, error) {
+func FindUserById(ctx context.Context, id int32) (*User, error) {
 	q := `SELECT id, name, email FROM users WHERE id = ?`
 
-	row := pool.QueryRowContext(ctx, q, id)
+	row := db.Pool().QueryRowContext(ctx, q, id)
 
 	var user User
 	switch err := row.Scan(&user.ID, &user.Name, &user.Email); err {
@@ -80,10 +81,10 @@ func FindUserById(ctx context.Context, pool *sql.DB, id int32) (*User, error) {
 	}
 }
 
-func UserExists(ctx context.Context, pool *sql.DB, id int32) (bool, error) {
+func UserExists(ctx context.Context, id int32) (bool, error) {
 	q := `SELECT id FROM users WHERE id = ?`
 
-	row := pool.QueryRowContext(ctx, q, id)
+	row := db.Pool().QueryRowContext(ctx, q, id)
 
 	var userId int
 	switch err := row.Scan(&userId); err {
