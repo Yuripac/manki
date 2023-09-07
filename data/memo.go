@@ -3,6 +3,8 @@ package data
 import "time"
 
 func CalcCardMemo(c *Card, score int8) {
+	c.Repetitions++
+
 	CalcCardEfactor(c, score)
 	CalcCardNextRep(c)
 }

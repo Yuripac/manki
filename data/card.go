@@ -70,8 +70,6 @@ func UpdateMemo(ctx context.Context, pool *sql.DB, c *Card, score int8) error {
 	WHERE id = ?
 	`
 
-	c.Repetitions++
-
 	CalcCardMemo(c, score)
 
 	result, err := pool.ExecContext(ctx, q, c.Repetitions, c.Efactor, c.NextRepetition, c.ID)
