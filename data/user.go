@@ -18,12 +18,14 @@ type User struct {
 	JWT          string `json:"jwt"`
 }
 
+const jwtDuration = 15 * 24 * time.Hour
+
 func (u User) GenJWT() (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"id":         u.ID,
 		"name":       u.Name,
 		"email":      u.Email,
-		"expires_at": time.Now().Add(15 * 24 * time.Hour).Unix(),
+		"expires_at": time.Now().Add(jwtDuration).Unix(),
 	})
 	tokenStr, err := token.SignedString([]byte(os.Getenv("JWT_SECRET")))
 	if err != nil {
