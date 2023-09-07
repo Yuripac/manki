@@ -63,7 +63,7 @@ func Cards(ctx context.Context, pool *sql.DB, userId int32) ([]Card, error) {
 	return cards, nil
 }
 
-func UpdateMemo(ctx context.Context, pool *sql.DB, c *Card, score float64) error {
+func UpdateMemo(ctx context.Context, pool *sql.DB, c *Card, score int8) error {
 	q := `
 	UPDATE cards
 	SET repetitions = ?, efactor = ?, next_repetition_at = ?

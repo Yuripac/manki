@@ -2,17 +2,18 @@ package data
 
 import "time"
 
-func CalcCardMemo(c *Card, score float64) {
+func CalcCardMemo(c *Card, score int8) {
 	CalcCardEfactor(c, score)
 	CalcCardNextRep(c)
 }
 
-func CalcCardEfactor(c *Card, score float64) {
+func CalcCardEfactor(c *Card, score int8) {
 	if c.Efactor <= 1.3 {
 		return
 	}
 
-	c.Efactor = c.Efactor - 0.8 + (0.28 * score) - (0.02 * score * score)
+	scoreF := float64(score)
+	c.Efactor = c.Efactor - 0.8 + (0.28 * scoreF) - (0.02 * scoreF * scoreF)
 }
 
 func CalcCardNextRep(c *Card) {

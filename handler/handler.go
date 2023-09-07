@@ -48,7 +48,7 @@ func (h handler) cardsNextHandler(w http.ResponseWriter, r *http.Request) {
 
 	if r.Method == "PUT" {
 		var params struct {
-			Score float64 `json:"score"`
+			Score int8 `json:"score"`
 		}
 		body, _ := io.ReadAll(r.Body)
 		err := json.Unmarshal(body, &params)
