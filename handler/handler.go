@@ -13,6 +13,10 @@ import (
 	"github.com/gorilla/mux"
 )
 
+var (
+	ErrCreatingUser = errors.New("error creating the user")
+)
+
 func NewRouter(ctx context.Context) http.Handler {
 	r := mux.NewRouter()
 
@@ -138,8 +142,6 @@ func SignInHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.Write(body)
 }
-
-var ErrCreatingUser = errors.New("error creating the user")
 
 func SignUpHandler(w http.ResponseWriter, r *http.Request) {
 	body, _ := io.ReadAll(r.Body)
