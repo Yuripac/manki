@@ -27,13 +27,16 @@ func NewRouter(ctx context.Context) http.Handler {
 	userR := r.PathPrefix("/users/").Subrouter()
 	userR.Use(AuthMiddleware)
 
-	userR.HandleFunc("/cards", CardsHandler).Methods("GET", "POST")
-	userR.HandleFunc("/cards/next", CardsNextHandler).Methods("GET", "PUT")
+	userR.HandleFunc("/cards", CardsHandler).Methods("GET")
+	userR.HandleFunc("/cards", CardCreateHandler).Methods("POST")
+
+	userR.HandleFunc("/cards/next", CardNextHandler).Methods("GET")
+	userR.HandleFunc("/cards/next", CardUpdateNextHandler).Methods("PUT")
 
 	return r
 }
 
-func CardsNextHandler(w http.ResponseWriter, r *http.Request) {
+func CardNextHandler(w http.ResponseWriter, r *http.Request) {
 	userAuth, _ := r.Context().Value("user").(*data.User)
 
 	c, err := data.NextCard(r.Context(), userAuth.ID)
@@ -43,58 +46,75 @@ func CardsNextHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if r.Method == "PUT" {
-		var params struct {
-			Score int8 `json:"score"`
-		}
-		body, _ := io.ReadAll(r.Body)
-		err := json.Unmarshal(body, &params)
-		if err != nil {
-			log.Panicf("error on json unmarshal: %s", err)
-		}
+	body, _ := json.Marshal(c)
+	w.Write(body)
+}
 
-		if err = data.UpdateMemo(r.Context(), c, params.Score); err != nil {
-			log.Printf("error updating the next card: %s", err)
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
+func CardUpdateNextHandler(w http.ResponseWriter, r *http.Request) {
+	userAuth, _ := r.Context().Value("user").(*data.User)
+
+	c, err := data.NextCard(r.Context(), userAuth.ID)
+	if err != nil {
+		log.Printf("error searching for next card: %s", err)
+
+		http.Error(w, "no card to remember", http.StatusNotFound)
+		return
 	}
 
-	body, _ := json.Marshal(c)
+	body, _ := io.ReadAll(r.Body)
+	var params struct {
+		Score int8 `json:"score"`
+	}
+	err = json.Unmarshal(body, &params)
+	if err != nil {
+		log.Printf("error on json unmarshal: %s", err)
+
+		http.Error(w, "something wrong with the score", http.StatusBadRequest)
+		return
+	}
+
+	if err = data.UpdateMemo(r.Context(), c, params.Score); err != nil {
+		log.Printf("error updating the next card: %s", err)
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	body, _ = json.Marshal(c)
 	w.Write(body)
 }
 
 func CardsHandler(w http.ResponseWriter, r *http.Request) {
 	userAuth, _ := r.Context().Value("user").(*data.User)
 
-	switch r.Method {
-	case "POST":
-		body, _ := io.ReadAll(r.Body)
-
-		var c data.Card
-		json.Unmarshal(body, &c)
-
-		c.UserId = userAuth.ID
-
-		if err := data.AddCard(r.Context(), &c); err != nil {
-			log.Printf("error adding a new card: %s", err)
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-
-		body, _ = json.Marshal(c)
-		w.Write(body)
-	case "GET":
-		cards, err := data.Cards(r.Context(), userAuth.ID)
-		if err != nil {
-			log.Printf("error listing cards: %s", err)
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-
-		body, _ := json.Marshal(cards)
-		w.Write(body)
+	cards, err := data.Cards(r.Context(), userAuth.ID)
+	if err != nil {
+		log.Printf("error listing cards: %s", err)
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
 	}
+
+	body, _ := json.Marshal(cards)
+	w.Write(body)
+}
+
+func CardCreateHandler(w http.ResponseWriter, r *http.Request) {
+	userAuth, _ := r.Context().Value("user").(*data.User)
+
+	body, _ := io.ReadAll(r.Body)
+
+	var c data.Card
+	json.Unmarshal(body, &c)
+
+	c.UserId = userAuth.ID
+
+	if err := data.AddCard(r.Context(), &c); err != nil {
+		log.Printf("error adding a new card: %s", err)
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	body, _ = json.Marshal(c)
+	w.Write(body)
 }
 
 func AuthMiddleware(next http.Handler) http.Handler {
