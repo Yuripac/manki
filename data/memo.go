@@ -1,6 +1,9 @@
 package data
 
-import "time"
+import (
+	"math"
+	"time"
+)
 
 func CalcCardMemo(c *Card, score int8) {
 	c.Repetitions++
@@ -10,31 +13,32 @@ func CalcCardMemo(c *Card, score int8) {
 }
 
 func CalcCardEfactor(c *Card, score int8) {
-	if c.Efactor <= 1.3 {
-		return
-	}
-
 	scoreF := float64(score)
 	c.Efactor = c.Efactor - 0.8 + (0.28 * scoreF) - (0.02 * scoreF * scoreF)
+
+	if c.Efactor < 1.3 {
+		c.Efactor = 1.3
+		return
+	}
 }
 
 func CalcCardNextRep(c *Card) {
-	newDuration := calcDaysDuration(c.Repetitions, c.Efactor)
-	nextRep := time.Now().Add(newDuration)
+	days := calcDays(c.Repetitions, c.Efactor)
+	days = math.Round(days)
+	nextRep := time.Now().Add(time.Duration(days) * 24 * time.Hour)
 
 	c.NextRepetition = &nextRep
 }
 
-func calcDaysDuration(repetition int32, efactor float64) time.Duration {
-	var days time.Duration
+func calcDays(repetition int32, efactor float64) (days float64) {
 	switch repetition {
 	case 1:
 		days = 1
 	case 2:
 		days = 6
 	default:
-		days = calcDaysDuration(repetition-1, efactor) * time.Duration(efactor)
+		return calcDays(repetition-1, efactor) * efactor
 	}
 
-	return days * 24 * time.Hour
+	return days
 }
