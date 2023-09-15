@@ -63,14 +63,14 @@ func Cards(ctx context.Context, userId int32) ([]Card, error) {
 	return cards, nil
 }
 
-func UpdateMemo(ctx context.Context, c *Card, score int8) error {
+func Prepare(ctx context.Context, remember Remember, c *Card, score int8) error {
 	q := `
 	UPDATE cards
 	SET repetitions = ?, efactor = ?, next_repetition_at = ?
 	WHERE id = ?
 	`
 
-	CalcCardMemo(c, score)
+	remember.PrepareNext(c, score)
 
 	result, err := db.Pool().ExecContext(ctx, q, c.Repetitions, c.Efactor, c.NextRepetition, c.ID)
 	if err != nil {

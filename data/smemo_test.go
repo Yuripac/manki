@@ -77,7 +77,7 @@ func TestMemoCalculationSetup(t *testing.T) {
 	for _, test := range tests {
 		func(t *testing.T) {
 			c := test.Card
-			CalcCardMemo(&c, test.Score)
+			(SMemo{}).PrepareNext(&c, test.Score)
 
 			if c.Repetitions != test.Repetitions {
 				t.Fatalf(`Card.Repetitions = %d, expected %d`, c.Repetitions, test.Repetitions)

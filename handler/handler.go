@@ -73,7 +73,7 @@ func CardUpdateNextHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err = data.UpdateMemo(r.Context(), c, params.Score); err != nil {
+	if err = data.Prepare(r.Context(), data.SMemo{}, c, params.Score); err != nil {
 		log.Printf("error updating the next card: %s", err)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
