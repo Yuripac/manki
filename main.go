@@ -15,8 +15,7 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	err := db.Init()
-	if err != nil {
+	if err := db.Init(); err != nil {
 		log.Fatalf("error opening the database: %s", err)
 	}
 	defer db.Pool().Close()
@@ -26,12 +25,8 @@ func main() {
 		Handler: handler.NewRouter(ctx),
 	}
 
-	go func() {
-		log.Println("Running server...")
-		if err := server.ListenAndServe(); err != nil {
-			log.Fatalf("error running server: %s", err)
-		}
-	}()
-
-	<-ctx.Done()
+	log.Println("Running server...")
+	if err := server.ListenAndServe(); err != nil {
+		log.Fatalf("error running server: %s", err)
+	}
 }

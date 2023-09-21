@@ -4,11 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"html/template"
 	"io"
 	"log"
 	"manki/data"
 	"net/http"
-	"strings"
 
 	"github.com/gorilla/mux"
 )
@@ -20,20 +20,42 @@ var (
 func NewRouter(ctx context.Context) http.Handler {
 	r := mux.NewRouter()
 
+	r.HandleFunc("/signin", SignInPageHandler).Methods("GET")
 	r.HandleFunc("/signin", SignInHandler).Methods("POST")
+
+	r.HandleFunc("/signup", SignUpHandler).Methods("GET")
 	r.HandleFunc("/signup", SignUpHandler).Methods("POST")
 	r.HandleFunc("/status", HealthcheckHandler).Methods("GET")
+
+	r.HandleFunc("/", HomeHandler).Methods("GET")
 
 	userR := r.PathPrefix("/users/").Subrouter()
 	userR.Use(AuthMiddleware)
 
-	userR.HandleFunc("/cards", CardsHandler).Methods("GET")
 	userR.HandleFunc("/cards", CardCreateHandler).Methods("POST")
 
 	userR.HandleFunc("/cards/next", CardNextHandler).Methods("GET")
 	userR.HandleFunc("/cards/next", CardUpdateNextHandler).Methods("PUT")
 
 	return r
+}
+
+func AuthMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		user, err := authenticate(r)
+		if err != nil {
+			http.Redirect(w, r, "/signin", http.StatusMovedPermanently)
+			return
+		}
+
+		r = r.WithContext(context.WithValue(r.Context(), "user", user))
+
+		next.ServeHTTP(w, r)
+	})
+}
+
+func HomeHandler(w http.ResponseWriter, r *http.Request) {
+	http.Redirect(w, r, "/users/cards/next", http.StatusMovedPermanently)
 }
 
 func CardNextHandler(w http.ResponseWriter, r *http.Request) {
@@ -46,8 +68,8 @@ func CardNextHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	body, _ := json.Marshal(c)
-	w.Write(body)
+	t, _ := template.ParseFiles("www/cards/next.html")
+	t.Execute(w, c)
 }
 
 func CardUpdateNextHandler(w http.ResponseWriter, r *http.Request) {
@@ -83,20 +105,6 @@ func CardUpdateNextHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write(body)
 }
 
-func CardsHandler(w http.ResponseWriter, r *http.Request) {
-	userAuth, _ := r.Context().Value("user").(*data.User)
-
-	cards, err := data.Cards(r.Context(), userAuth.ID)
-	if err != nil {
-		log.Printf("error listing cards: %s", err)
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	body, _ := json.Marshal(cards)
-	w.Write(body)
-}
-
 func CardCreateHandler(w http.ResponseWriter, r *http.Request) {
 	userAuth, _ := r.Context().Value("user").(*data.User)
 
@@ -117,33 +125,22 @@ func CardCreateHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write(body)
 }
 
-func AuthMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		authHeader := r.Header.Get("Authorization")
+func SignInPageHandler(w http.ResponseWriter, r *http.Request) {
+	user, _ := authenticate(r)
+	if user != nil {
+		http.Redirect(w, r, "/", http.StatusMovedPermanently)
+	}
 
-		if authValues := strings.Split(authHeader, "Bearer "); len(authValues) == 2 {
-			userAuth, err := data.FindUserByJWT(r.Context(), authValues[1])
-			if err != nil {
-				log.Printf("error on find by jwt: %s", err)
-
-				http.Error(w, "unauthorized", http.StatusUnauthorized)
-				return
-			}
-
-			r = r.WithContext(context.WithValue(r.Context(), "user", userAuth))
-
-			next.ServeHTTP(w, r)
-			return
-		}
-
-		http.Error(w, "unauthorized", http.StatusUnauthorized)
-	})
+	t, _ := template.ParseFiles("www/signin.html")
+	t.Execute(w, nil)
 }
 
 func SignInHandler(w http.ResponseWriter, r *http.Request) {
-	body, _ := io.ReadAll(r.Body)
-	var in data.SignIn
-	json.Unmarshal(body, &in)
+	r.ParseForm()
+	in := data.SignIn{
+		Email: r.Form.Get("email"),
+		Psw:   r.Form.Get("password"),
+	}
 
 	user, err := in.Validate(r.Context())
 	if err != nil {
@@ -158,9 +155,10 @@ func SignInHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, ErrCreatingUser.Error(), http.StatusBadRequest)
 		return
 	}
-	body, _ = json.Marshal(result)
 
-	w.Write(body)
+	http.SetCookie(w, &http.Cookie{Name: "token", Value: result["jwt"]})
+
+	http.Redirect(w, r, "/users/cards/next", http.StatusMovedPermanently)
 }
 
 func SignUpHandler(w http.ResponseWriter, r *http.Request) {
@@ -191,4 +189,18 @@ func SignUpHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func HealthcheckHandler(w http.ResponseWriter, r *http.Request) {
+}
+
+func authenticate(r *http.Request) (*data.User, error) {
+	cookie, err := r.Cookie("token")
+	if err != nil {
+		return nil, err
+	}
+
+	userAuth, err := data.FindUserByJWT(r.Context(), cookie.Value)
+	if err != nil {
+		return nil, err
+	}
+
+	return userAuth, nil
 }

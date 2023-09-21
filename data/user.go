@@ -44,7 +44,7 @@ func FindUserByJWT(ctx context.Context, tokenStr string) (*User, error) {
 		return []byte(os.Getenv("JWT_SECRET")), nil
 	})
 
-	if !token.Valid {
+	if token == nil || !token.Valid {
 		return nil, fmt.Errorf("JWT is not valid")
 	}
 
