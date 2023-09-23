@@ -1,0 +1,42 @@
+<head>
+    <script>
+      document.onreadystatechange = () => {
+        showMeaning = () => {
+          document.querySelector(".card__meaning").style.display = "block"
+        }
+  
+        document.querySelector(".card__show-meaning").addEventListener("click", showMeaning)
+      }
+    </script>
+  
+    <style>
+      .card {
+        text-align: center;
+      }
+  
+      .card__meaning {
+        display: none;
+      }
+    </style>
+  </head>
+  
+  <body>
+    <title>Manki</title>
+  
+    <h1>Manki</h1>
+    <hr>
+    <br>
+  
+    <div class="card">
+      <div class="card__sentence">
+        <h2>{{.Sentence}}</h2>
+      </div>
+  
+      <div class="card__meaning">
+        <h3>{{.Meaning}}</h3>
+      </div>
+  
+      <button class="card__show-meaning">Show</button>
+    </div>
+  
+  </body>

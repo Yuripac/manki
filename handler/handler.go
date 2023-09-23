@@ -2,202 +2,178 @@ package handler
 
 import (
 	"context"
-	"encoding/json"
-	"errors"
-	"html/template"
-	"io"
 	"log"
 	"manki/data"
 	"net/http"
+	"strconv"
 
-	"github.com/gorilla/mux"
+	"github.com/labstack/echo/v4"
 )
 
-var (
-	ErrCreatingUser = errors.New("error creating the user")
-)
-
-func NewRouter(ctx context.Context) http.Handler {
-	r := mux.NewRouter()
-
-	r.HandleFunc("/signin", SignInPageHandler).Methods("GET")
-	r.HandleFunc("/signin", SignInHandler).Methods("POST")
-
-	r.HandleFunc("/signup", SignUpHandler).Methods("GET")
-	r.HandleFunc("/signup", SignUpHandler).Methods("POST")
-	r.HandleFunc("/status", HealthcheckHandler).Methods("GET")
-
-	r.HandleFunc("/", HomeHandler).Methods("GET")
-
-	userR := r.PathPrefix("/users/").Subrouter()
-	userR.Use(AuthMiddleware)
-
-	userR.HandleFunc("/cards", CardCreateHandler).Methods("POST")
-
-	userR.HandleFunc("/cards/next", CardNextHandler).Methods("GET")
-	userR.HandleFunc("/cards/next", CardUpdateNextHandler).Methods("PUT")
-
-	return r
-}
-
-func AuthMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		user, err := authenticate(r)
+func AuthMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		user, err := auth(c)
 		if err != nil {
-			http.Redirect(w, r, "/signin", http.StatusMovedPermanently)
-			return
+			return err
 		}
 
-		r = r.WithContext(context.WithValue(r.Context(), "user", user))
-
-		next.ServeHTTP(w, r)
-	})
+		c.SetRequest(c.Request().WithContext(context.WithValue(c.Request().Context(), "user", user)))
+		return next(c)
+	}
 }
 
-func HomeHandler(w http.ResponseWriter, r *http.Request) {
-	http.Redirect(w, r, "/users/cards/next", http.StatusMovedPermanently)
+func Home(c echo.Context) error {
+	user, _ := auth(c)
+	if user == nil {
+		return c.Redirect(http.StatusMovedPermanently, "/signin")
+	}
+
+	return c.Redirect(http.StatusMovedPermanently, "/cards/next")
 }
 
-func CardNextHandler(w http.ResponseWriter, r *http.Request) {
-	userAuth, _ := r.Context().Value("user").(*data.User)
+func NextCard(c echo.Context) error {
+	user, _ := c.Request().Context().Value("user").(*data.User)
 
-	c, err := data.NextCard(r.Context(), userAuth.ID)
+	card, err := data.NextCard(c.Request().Context(), user.ID)
 	if err != nil {
 		log.Printf("error searching for next card: %s", err)
-		http.Error(w, "no card to remember", http.StatusNotFound)
-		return
+		c.String(http.StatusNotFound, "no card to remember")
+
+		return c.Render(http.StatusBadRequest, "card_next.html", &card)
 	}
 
-	t, _ := template.ParseFiles("www/cards/next.html")
-	t.Execute(w, c)
+	return c.Render(http.StatusOK, "card_next.html", &card)
 }
 
-func CardUpdateNextHandler(w http.ResponseWriter, r *http.Request) {
-	userAuth, _ := r.Context().Value("user").(*data.User)
+func UpdateNextCard(c echo.Context) error {
+	user, _ := c.Request().Context().Value("user").(*data.User)
 
-	c, err := data.NextCard(r.Context(), userAuth.ID)
+	card, err := data.NextCard(c.Request().Context(), user.ID)
 	if err != nil {
 		log.Printf("error searching for next card: %s", err)
 
-		http.Error(w, "no card to remember", http.StatusNotFound)
-		return
+		return c.Render(http.StatusBadRequest, "card_next.html", card)
 	}
 
-	body, _ := io.ReadAll(r.Body)
-	var params struct {
-		Score int8 `json:"score"`
-	}
-	err = json.Unmarshal(body, &params)
-	if err != nil {
-		log.Printf("error on json unmarshal: %s", err)
-
-		http.Error(w, "something wrong with the score", http.StatusBadRequest)
-		return
-	}
-
-	if err = data.Prepare(r.Context(), data.SMemo{}, c, params.Score); err != nil {
+	c.Request().ParseForm()
+	score, err := strconv.ParseInt(c.FormValue("score"), 10, 0)
+	if err := data.Prepare(c.Request().Context(), data.SMemo{}, card, int8(score)); err != nil {
 		log.Printf("error updating the next card: %s", err)
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
+
+		return c.Render(http.StatusBadRequest, "card_next.html", card)
 	}
 
-	body, _ = json.Marshal(c)
-	w.Write(body)
+	return c.Render(http.StatusOK, "card_next.html", nil)
 }
 
-func CardCreateHandler(w http.ResponseWriter, r *http.Request) {
-	userAuth, _ := r.Context().Value("user").(*data.User)
-
-	body, _ := io.ReadAll(r.Body)
-
-	var c data.Card
-	json.Unmarshal(body, &c)
-
-	c.UserId = userAuth.ID
-
-	if err := data.AddCard(r.Context(), &c); err != nil {
-		log.Printf("error adding a new card: %s", err)
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	body, _ = json.Marshal(c)
-	w.Write(body)
+func CardForm(c echo.Context) error {
+	return c.Render(http.StatusOK, "card_new.html", nil)
 }
 
-func SignInPageHandler(w http.ResponseWriter, r *http.Request) {
-	user, _ := authenticate(r)
-	if user != nil {
-		http.Redirect(w, r, "/", http.StatusMovedPermanently)
+func CreateCard(c echo.Context) error {
+	user, _ := c.Request().Context().Value("user").(*data.User)
+
+	c.Request().ParseForm()
+
+	card := &data.Card{
+		UserId:   user.ID,
+		Sentence: c.FormValue("sentence"),
+		Meaning:  c.FormValue("meaning"),
 	}
 
-	t, _ := template.ParseFiles("www/signin.html")
-	t.Execute(w, nil)
-}
-
-func SignInHandler(w http.ResponseWriter, r *http.Request) {
-	r.ParseForm()
-	in := data.SignIn{
-		Email: r.Form.Get("email"),
-		Psw:   r.Form.Get("password"),
-	}
-
-	user, err := in.Validate(r.Context())
+	err := data.AddCard(c.Request().Context(), card)
 	if err != nil {
-		http.Error(w, "email or password incorrect", http.StatusUnauthorized)
-		return
+		log.Printf("error adding a new card: %s", err)
+
+		return c.Render(http.StatusBadRequest, "card_new.html", card)
 	}
 
-	result := make(map[string]string)
-	result["jwt"], err = user.GenJWT()
+	return c.Render(http.StatusOK, "card_new.html", card)
+}
+
+func SignInForm(c echo.Context) error {
+	user, _ := auth(c)
+
+	// TODO: Check error instead
+	if user != nil {
+		return c.Redirect(http.StatusMovedPermanently, "/")
+	}
+
+	return c.Render(http.StatusOK, "signin.html", nil)
+}
+
+func SignIn(c echo.Context) error {
+	c.Request().ParseForm()
+
+	signin := data.SignIn{
+		Email: c.FormValue("email"),
+		Psw:   c.FormValue("password"),
+	}
+
+	user, err := signin.Validate(c.Request().Context())
+	if err != nil {
+		// TODO: Should alert about failure some how
+		return c.Render(http.StatusUnauthorized, "signin.html", user)
+	}
+
+	jwt, err := user.GenJWT()
 	if err != nil {
 		log.Printf("error generating JWT: %s", err)
-		http.Error(w, ErrCreatingUser.Error(), http.StatusBadRequest)
-		return
+		// TODO: Should alert about failure some how
+		return c.Render(http.StatusUnauthorized, "signin.html", user)
 	}
 
-	http.SetCookie(w, &http.Cookie{Name: "token", Value: result["jwt"]})
+	c.SetCookie(&http.Cookie{Name: "token", Value: jwt})
 
-	http.Redirect(w, r, "/users/cards/next", http.StatusMovedPermanently)
+	return c.Redirect(http.StatusMovedPermanently, "/")
 }
 
-func SignUpHandler(w http.ResponseWriter, r *http.Request) {
-	body, _ := io.ReadAll(r.Body)
+func SignUpForm(c echo.Context) error {
+	user, _ := auth(c)
 
-	var signup data.SignUp
-	json.Unmarshal(body, &signup)
+	// TODO: Check error instead
+	if user != nil {
+		return c.Redirect(http.StatusMovedPermanently, "/")
+	}
 
-	user, err := signup.Save(r.Context())
+	return c.Render(http.StatusOK, "signup.html", nil)
+}
+
+func SignUp(c echo.Context) error {
+	c.Request().ParseForm()
+
+	signup := data.SignUp{
+		Name:  c.FormValue("name"),
+		Email: c.FormValue("email"),
+		Psw:   c.FormValue("password"),
+	}
+
+	user, err := signup.Save(c.Request().Context())
 	if err != nil {
 		log.Printf("error in user signup: %s", err)
 
-		// TODO: Say what the problem is
-		http.Error(w, ErrCreatingUser.Error(), http.StatusBadRequest)
-		return
+		return c.Render(http.StatusBadRequest, "signup.html", nil)
 	}
 
-	result := make(map[string]string)
-	result["jwt"], err = user.GenJWT()
+	jwt, err := user.GenJWT()
 	if err != nil {
 		log.Printf("error generating JWT: %s", err)
-		http.Error(w, ErrCreatingUser.Error(), http.StatusBadRequest)
-		return
+
+		return c.Render(http.StatusBadRequest, "signup.html", nil)
 	}
-	body, _ = json.Marshal(result)
 
-	w.Write(body)
+	c.SetCookie(&http.Cookie{Name: "token", Value: jwt})
+
+	return c.Redirect(http.StatusMovedPermanently, "/")
 }
 
-func HealthcheckHandler(w http.ResponseWriter, r *http.Request) {
-}
-
-func authenticate(r *http.Request) (*data.User, error) {
-	cookie, err := r.Cookie("token")
+func auth(c echo.Context) (*data.User, error) {
+	cookie, err := c.Cookie("token")
 	if err != nil {
 		return nil, err
 	}
 
-	userAuth, err := data.FindUserByJWT(r.Context(), cookie.Value)
+	userAuth, err := data.FindUserByJWT(c.Request().Context(), cookie.Value)
 	if err != nil {
 		return nil, err
 	}
